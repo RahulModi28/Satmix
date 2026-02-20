@@ -1,0 +1,110 @@
+/* ========== MARKETS SECTION ========== */
+.markets {
+    background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+}
+
+.markets__grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-lg);
+}
+
+.markets__card {
+    padding: var(--space-lg) !important;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.markets__card-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.markets__coin-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    font-weight: 700;
+    border: 1px solid;
+    flex-shrink: 0;
+}
+
+.markets__coin-symbol {
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.markets__coin-name {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+.markets__card-price {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+}
+
+.markets__price {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.markets__change {
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 0.2rem 0.6rem;
+    border-radius: var(--radius-full);
+}
+
+.markets__change--up {
+    color: var(--color-accent-green);
+    background: rgba(16, 185, 129, 0.12);
+}
+
+.markets__change--down {
+    color: var(--color-accent-red);
+    background: rgba(239, 68, 68, 0.12);
+}
+
+/* Mini Chart */
+.markets__mini-chart {
+    height: 30px;
+    overflow: hidden;
+}
+
+.markets__mini-chart svg {
+    width: 100%;
+    height: 100%;
+}
+
+.markets__mini-chart .chart-up polyline {
+    stroke: var(--color-accent-green);
+}
+
+.markets__mini-chart .chart-down polyline {
+    stroke: var(--color-accent-red);
+}
+
+/* ========= RESPONSIVE ========= */
+@media (max-width: 1024px) {
+    .markets__grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .markets__grid {
+        grid-template-columns: 1fr;
+    }
+}

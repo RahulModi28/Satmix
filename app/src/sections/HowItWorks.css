@@ -1,0 +1,107 @@
+/* ========== HOW IT WORKS ========== */
+.hiw__steps {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: var(--space-xl);
+    position: relative;
+}
+
+.hiw__step {
+    flex: 1;
+    max-width: 320px;
+    text-align: center;
+    position: relative;
+    padding: var(--space-2xl) var(--space-lg);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    backdrop-filter: blur(12px);
+    transition: all var(--transition-base);
+}
+
+.hiw__step:hover {
+    border-color: var(--border-glow);
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-glow-gold);
+}
+
+.hiw__number {
+    font-family: var(--font-display);
+    font-size: 3rem;
+    font-weight: 900;
+    color: rgba(245, 158, 11, 0.1);
+    position: absolute;
+    top: 12px;
+    right: 20px;
+    line-height: 1;
+}
+
+.hiw__icon-wrap {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto var(--space-lg);
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(139, 92, 246, 0.1));
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: glow-pulse 3s ease-in-out infinite;
+}
+
+.hiw__icon {
+    font-size: 2rem;
+}
+
+.hiw__title {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    margin-bottom: var(--space-sm);
+    color: var(--text-primary);
+}
+
+.hiw__desc {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    line-height: 1.7;
+}
+
+/* Connector line between steps */
+.hiw__connector {
+    display: none;
+}
+
+/* ========= RESPONSIVE ========= */
+@media (max-width: 768px) {
+    .hiw__steps {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .hiw__step {
+        max-width: 100%;
+    }
+}
+
+@media (min-width: 769px) {
+    .hiw__connector {
+        display: block;
+        position: absolute;
+        top: 50%;
+        right: -2rem;
+        width: 2.5rem;
+        height: 2px;
+        background: linear-gradient(to right, var(--color-primary), transparent);
+        transform: translateY(-50%);
+    }
+
+    .hiw__connector::after {
+        content: '→';
+        position: absolute;
+        right: -6px;
+        top: -10px;
+        color: var(--color-primary);
+        font-size: 1rem;
+    }
+}

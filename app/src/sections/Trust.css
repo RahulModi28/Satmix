@@ -1,0 +1,87 @@
+/* ========== TRUST & SECURITY ========== */
+.trust {
+    background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-primary) 100%);
+}
+
+.trust__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-xl);
+    margin-bottom: var(--space-2xl);
+}
+
+.trust__card {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-lg);
+    padding: var(--space-xl);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    backdrop-filter: blur(12px);
+    transition: all var(--transition-base);
+}
+
+.trust__card:hover {
+    border-color: rgba(16, 185, 129, 0.3);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
+    transform: translateY(-3px);
+}
+
+.trust__icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.15);
+}
+
+.trust__title {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    margin-bottom: 0.3rem;
+}
+
+.trust__desc {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    line-height: 1.7;
+}
+
+/* Regulatory Banner */
+.trust__banner {
+    padding: var(--space-lg);
+    background: rgba(245, 158, 11, 0.06);
+    border: 1px solid rgba(245, 158, 11, 0.15);
+    border-radius: var(--radius-md);
+}
+
+.trust__banner-inner {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-md);
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.7;
+}
+
+.trust__banner-icon {
+    font-size: 1.4rem;
+    flex-shrink: 0;
+}
+
+.trust__banner-inner strong {
+    color: var(--color-primary);
+}
+
+/* ========= RESPONSIVE ========= */
+@media (max-width: 768px) {
+    .trust__grid {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,0 +1,89 @@
+/* ========== COMPARISON TABLE ========== */
+.comp__table-wrap {
+    overflow-x: auto;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    backdrop-filter: blur(12px);
+}
+
+.comp__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+    min-width: 600px;
+}
+
+.comp__table thead {
+    background: rgba(245, 158, 11, 0.06);
+}
+
+.comp__table th {
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 1rem 1.25rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.comp__table th:first-child {
+    text-align: left;
+}
+
+.comp__table td {
+    padding: 0.85rem 1.25rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-secondary);
+}
+
+.comp__table tr:last-child td {
+    border-bottom: none;
+}
+
+.comp__table tbody tr:hover {
+    background: rgba(245, 158, 11, 0.04);
+}
+
+.comp__feature-name {
+    text-align: left !important;
+    font-weight: 500;
+    color: var(--text-primary) !important;
+}
+
+/* Highlight Satmix column */
+.comp__highlight-col {
+    background: rgba(245, 158, 11, 0.08) !important;
+    color: var(--color-primary) !important;
+    font-weight: 600 !important;
+}
+
+.comp__check,
+.comp__cross,
+.comp__partial {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.comp__cross {
+    opacity: 0.6;
+}
+
+.comp__text {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 0.85rem;
+    line-height: 1;
+    vertical-align: middle;
+}

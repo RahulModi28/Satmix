@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Satmix — Live Crypto Prices</title>
+    <meta name="description" content="Real-time cryptocurrency prices powered by Binance WebSocket streams." />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet" />
+
+    <style>
+        /* ─── RESET & BASE ───────────────────────────────────── */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-card: #111827;
+            --bg-row-hover: rgba(245, 158, 11, 0.04);
+            --border: rgba(248, 250, 252, 0.06);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --amber: #f59e0b;
+            --green: #22c55e;
+            --green-bg: rgba(34, 197, 94, 0.1);
+            --red: #ef4444;
+            --red-bg: rgba(239, 68, 68, 0.1);
+            --radius: 16px;
+            --transition: 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -30%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(245, 158, 11, 0.06) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ─── HEADER ─────────────────────────────────────────── */
+        .header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header__brand {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header__logo {
+            width: 32px;
+            height: 32px;
+            border: 2px solid var(--amber);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+        }
+
+        .header__name {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--amber), #fbbf24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header__subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            font-weight: 400;
+        }
+
+        .header__badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            margin-top: 0.4rem;
+            padding: 0.2rem 0.65rem;
+            border-radius: 20px;
+            background: rgba(245, 158, 11, 0.08);
+            border: 1px solid rgba(245, 158, 11, 0.15);
+            color: var(--amber);
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+        }
+
+        /* ─── STATUS BAR ─────────────────────────────────────── */
+        .status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 1060px;
+            margin-bottom: 1rem;
+            padding: 0 0.25rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--red);
+            transition: background var(--transition);
+        }
+
+        .status-dot--live {
+            background: var(--green);
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+            }
+
+            50% {
+                box-shadow: 0 0 16px rgba(34, 197, 94, 0.8);
+            }
+        }
+
+        .status-text--live {
+            color: var(--green);
+        }
+
+        .status-text--disconnected {
+            color: var(--red);
+        }
+
+        .last-updated {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ─── TABLE CARD ─────────────────────────────────────── */
+        .table-card {
+            width: 100%;
+            max-width: 1060px;
+            background: linear-gradient(168deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9));
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 4px 48px rgba(0, 0, 0, 0.3);
+        }
+
+        /* ─── TABLE ──────────────────────────────────────────── */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead th {
+            padding: 1rem 1.25rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.15);
+            white-space: nowrap;
+        }
+
+        thead th:nth-child(n+3) {
+            text-align: right;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid rgba(248, 250, 252, 0.03);
+            transition: background var(--transition);
+        }
+
+        tbody tr:hover {
+            background: var(--bg-row-hover);
+        }
+
+        tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        tbody td {
+            padding: 0.85rem 1.25rem;
+            font-size: 0.92rem;
+            vertical-align: middle;
+        }
+
+        /* Coin name + symbol column */
+        .coin-cell {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .coin-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.65rem;
+            flex-shrink: 0;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .coin-icon--BTC {
+            background: linear-gradient(135deg, #f7931a22, #f7931a11);
+            color: #f7931a;
+        }
+
+        .coin-icon--ETH {
+            background: linear-gradient(135deg, #627eea22, #627eea11);
+            color: #627eea;
+        }
+
+        .coin-icon--SOL {
+            background: linear-gradient(135deg, #9945ff22, #9945ff11);
+            color: #9945ff;
+        }
+
+        .coin-icon--BNB {
+            background: linear-gradient(135deg, #f3ba2f22, #f3ba2f11);
+            color: #f3ba2f;
+        }
+
+        .coin-icon--XRP {
+            background: linear-gradient(135deg, #00aae422, #00aae411);
+            color: #00aae4;
+        }
+
+        .coin-icon--DOGE {
+            background: linear-gradient(135deg, #c2a63322, #c2a63311);
+            color: #c2a633;
+        }
+
+        .coin-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .coin-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .coin-symbol {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            margin-top: 0.1rem;
+        }
+
+        /* Price columns */
+        .price-cell {
+            text-align: right;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 500;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            color: var(--text-primary);
+        }
+
+        .price-cell--muted {
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+        }
+
+        /* Volume column */
+        .volume-cell {
+            text-align: right;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        /* 24h change column */
+        .change-cell {
+            text-align: right;
+        }
+
+        .change-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.3rem 0.65rem;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .change-badge--up {
+            background: var(--green-bg);
+            color: var(--green);
+        }
+
+        .change-badge--down {
+            background: var(--red-bg);
+            color: var(--red);
+        }
+
+        .change-badge--neutral {
+            background: rgba(100, 116, 139, 0.1);
+            color: var(--text-muted);
+        }
+
+        /* Price flash animation */
+        @keyframes flash-green {
+            0% {
+                background: rgba(34, 197, 94, 0.15);
+            }
+
+            100% {
+                background: transparent;
+            }
+        }
+
+        @keyframes flash-red {
+            0% {
+                background: rgba(239, 68, 68, 0.15);
+            }
+
+            100% {
+                background: transparent;
+            }
+        }
+
+        .flash-up {
+            animation: flash-green 0.6s ease-out;
+        }
+
+        .flash-down {
+            animation: flash-red 0.6s ease-out;
+        }
+
+        /* ─── LOADING STATE ──────────────────────────────────── */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4rem 2rem;
+            gap: 1rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid rgba(245, 158, 11, 0.15);
+            border-top-color: var(--amber);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ─── FOOTER ─────────────────────────────────────────── */
+        .footer {
+            margin-top: 2rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .footer a {
+            color: var(--amber);
+            text-decoration: none;
+        }
+
+        /* ─── RESPONSIVE ─────────────────────────────────────── */
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem 0.5rem;
+            }
+
+            thead th,
+            tbody td {
+                padding: 0.65rem 0.6rem;
+            }
+
+            .coin-icon {
+                width: 28px;
+                height: 28px;
+                font-size: 0.55rem;
+            }
+
+            .price-cell {
+                font-size: 0.8rem;
+            }
+
+            .price-cell--muted {
+                font-size: 0.72rem;
+            }
+
+            .change-badge {
+                font-size: 0.72rem;
+                padding: 0.2rem 0.5rem;
+            }
+
+            .volume-cell {
+                font-size: 0.72rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ─── HEADER ─────────────────────────────────────────── -->
+    <header class="header">
+        <div class="header__brand">
+            <div class="header__logo">◎</div>
+            <span class="header__name">Satmix</span>
+        </div>
+        <p class="header__subtitle">Live Cryptocurrency Prices</p>
+        <div class="header__badge">⚡ Powered by Binance WebSocket</div>
+    </header>
+
+    <!-- ─── STATUS BAR ─────────────────────────────────────── -->
+    <div class="status-bar">
+        <div class="status-indicator" id="statusIndicator">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText">Connecting…</span>
+        </div>
+        <span class="last-updated" id="lastUpdated">Waiting for data…</span>
+    </div>
+
+    <!-- ─── PRICE TABLE ────────────────────────────────────── -->
+    <div class="table-card">
+        <div class="loading" id="loadingState">
+            <div class="spinner"></div>
+            <span>Connecting to Binance stream…</span>
+        </div>
+
+        <table id="priceTable" style="display: none;">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Coin</th>
+                    <th>Price (USD)</th>
+                    <th>24h High / Low</th>
+                    <th>24h Volume</th>
+                    <th>24h Change</th>
+                </tr>
+            </thead>
+            <tbody id="priceBody"></tbody>
+        </table>
+    </div>
+
+    <!-- ─── FOOTER ─────────────────────────────────────────── -->
+    <footer class="footer">
+        <p>Data from <a href="https://www.binance.com" target="_blank" rel="noopener">Binance</a> WebSocket streams ·
+            Real-time updates · Built with Satmix</p>
+    </footer>
+
+    <!-- ═══════════════════════════════════════════════════════
+       JAVASCRIPT — WebSocket Client + UI Logic
+       ═══════════════════════════════════════════════════════ -->
+    <script>
+        // ─── DOM REFERENCES ───────────────────────────────────
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const lastUpdatedEl = document.getElementById('lastUpdated');
+        const loadingState = document.getElementById('loadingState');
+        const priceTable = document.getElementById('priceTable');
+        const priceBody = document.getElementById('priceBody');
+
+        // ─── STATE ────────────────────────────────────────────
+        let ws = null;
+        let lastDataTime = null;
+        let tickerInterval = null;
+        let reconnectTimer = null;
+        let isConnected = false;
+        let previousPrices = {};  // Track previous prices for flash animation
+
+        // ─── FORMATTERS ───────────────────────────────────────
+
+        function formatUSD(num) {
+            if (num == null) return '—';
+            // Smart decimals: large numbers get 2, small numbers get more
+            if (num >= 1) {
+                return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            } else {
+                return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 6 });
+            }
+        }
+
+        function formatVolume(num) {
+            if (num == null) return '—';
+            if (num >= 1_000_000_000) return '$' + (num / 1_000_000_000).toFixed(2) + 'B';
+            if (num >= 1_000_000) return '$' + (num / 1_000_000).toFixed(2) + 'M';
+            if (num >= 1_000) return '$' + (num / 1_000).toFixed(1) + 'K';
+            return '$' + num.toFixed(2);
+        }
+
+        // ─── RENDER PRICE TABLE ───────────────────────────────
+        function renderPrices(coins) {
+            coins.forEach((coin, index) => {
+                // Find or create the row
+                let tr = document.getElementById(`row-${coin.symbol}`);
+                const isNew = !tr;
+
+                if (isNew) {
+                    tr = document.createElement('tr');
+                    tr.id = `row-${coin.symbol}`;
+                    priceBody.appendChild(tr);
+                }
+
+                // Determine price flash direction
+                const prevPrice = previousPrices[coin.symbol];
+                let flashClass = '';
+                if (prevPrice != null && coin.price_usd != null) {
+                    if (coin.price_usd > prevPrice) flashClass = 'flash-up';
+                    else if (coin.price_usd < prevPrice) flashClass = 'flash-down';
+                }
+                previousPrices[coin.symbol] = coin.price_usd;
+
+                // 24h change styling
+                const change = coin.change_24h;
+                let changeText = '—';
+                let changeClass = 'change-badge--neutral';
+                let arrow = '';
+
+                if (change != null) {
+                    const absChange = Math.abs(change).toFixed(2);
+                    if (change > 0) {
+                        changeText = `+${absChange}%`;
+                        changeClass = 'change-badge--up';
+                        arrow = '▲ ';
+                    } else if (change < 0) {
+                        changeText = `-${absChange}%`;
+                        changeClass = 'change-badge--down';
+                        arrow = '▼ ';
+                    } else {
+                        changeText = '0.00%';
+                    }
+                }
+
+                tr.innerHTML = `
+          <td style="color: var(--text-muted); font-size: 0.82rem; font-weight: 500;">${index + 1}</td>
+          <td>
+            <div class="coin-cell">
+              <div class="coin-icon coin-icon--${coin.symbol}">${coin.symbol}</div>
+              <div class="coin-info">
+                <span class="coin-name">${coin.name}</span>
+                <span class="coin-symbol">${coin.symbol}/USDT</span>
+              </div>
+            </div>
+          </td>
+          <td class="price-cell ${flashClass}">${formatUSD(coin.price_usd)}</td>
+          <td class="price-cell price-cell--muted">
+            ${coin.high_24h != null ? formatUSD(coin.high_24h) : '—'}<br/>
+            ${coin.low_24h != null ? formatUSD(coin.low_24h) : '—'}
+          </td>
+          <td class="volume-cell">${formatVolume(coin.volume)}</td>
+          <td class="change-cell">
+            <span class="change-badge ${changeClass}">${arrow}${changeText}</span>
+          </td>
+        `;
+
+                // Remove flash class after animation
+                if (flashClass) {
+                    const priceCell = tr.querySelector('.price-cell');
+                    if (priceCell) {
+                        priceCell.addEventListener('animationend', () => {
+                            priceCell.classList.remove('flash-up', 'flash-down');
+                        }, { once: true });
+                    }
+                }
+            });
+
+            // Show table, hide loading
+            loadingState.style.display = 'none';
+            priceTable.style.display = '';
+        }
+
+        // ─── "LAST UPDATED" TICKER ────────────────────────────
+        function startTicker() {
+            if (tickerInterval) clearInterval(tickerInterval);
+
+            tickerInterval = setInterval(() => {
+                if (!lastDataTime) return;
+                const seconds = Math.floor((Date.now() - lastDataTime) / 1000);
+
+                if (seconds < 2) {
+                    lastUpdatedEl.textContent = 'Live — streaming';
+                } else if (seconds < 60) {
+                    lastUpdatedEl.textContent = `Updated ${seconds}s ago`;
+                } else {
+                    const mins = Math.floor(seconds / 60);
+                    lastUpdatedEl.textContent = `Updated ${mins}m ${seconds % 60}s ago`;
+                }
+            }, 1000);
+        }
+
+        // ─── CONNECTION STATUS UI ─────────────────────────────
+        function setConnected() {
+            isConnected = true;
+            statusDot.className = 'status-dot status-dot--live';
+            statusText.textContent = 'Live';
+            statusText.className = 'status-text--live';
+        }
+
+        function setDisconnected() {
+            isConnected = false;
+            statusDot.className = 'status-dot';
+            statusText.textContent = 'Reconnecting…';
+            statusText.className = 'status-text--disconnected';
+        }
+
+        // ─── WEBSOCKET CONNECTION ─────────────────────────────
+        function connect() {
+            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${location.host}`;
+
+            console.log(`[WS] Connecting to ${wsUrl}…`);
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                console.log('[WS] Connected');
+                setConnected();
+                if (reconnectTimer) {
+                    clearTimeout(reconnectTimer);
+                    reconnectTimer = null;
+                }
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    if (msg.type === 'price_update' && Array.isArray(msg.data)) {
+                        lastDataTime = Date.now();
+                        renderPrices(msg.data);
+                        startTicker();
+                    }
+                } catch (err) {
+                    console.error('[WS] Failed to parse message:', err);
+                }
+            };
+
+            ws.onclose = (event) => {
+                console.log(`[WS] Disconnected (code: ${event.code})`);
+                setDisconnected();
+                if (!reconnectTimer) {
+                    reconnectTimer = setTimeout(() => {
+                        reconnectTimer = null;
+                        connect();
+                    }, 3000);
+                }
+            };
+
+            ws.onerror = (err) => {
+                console.error('[WS] Error:', err);
+                ws.close();
+            };
+        }
+
+        // ─── BOOT ─────────────────────────────────────────────
+        connect();
+    </script>
+</body>
+
+</html>
