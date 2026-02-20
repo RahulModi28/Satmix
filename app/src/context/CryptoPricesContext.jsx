@@ -8,7 +8,7 @@ const CryptoPricesContext = createContext({ prices: new Map(), isConnected: fals
  * Only one WebSocket connection is created, shared by all consumers.
  */
 export function CryptoPricesProvider({ children }) {
-    const data = useCryptoPrices('ws://localhost:8080')
+    const data = useCryptoPrices()
 
     return (
         <CryptoPricesContext.Provider value={data}>
