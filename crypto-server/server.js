@@ -25,7 +25,7 @@ const path = require('path');
 
 // ─── CONFIGURATION ──────────────────────────────────────────
 
-const PORT = 8080;
+const PORT = process.env.PORT || 8080;
 
 // Binance combined stream endpoint
 const BINANCE_WS_BASE = 'wss://stream.binance.com:9443/stream';
@@ -92,6 +92,27 @@ function scheduleBroadcast() {
 
 const app = express();
 const server = http.createServer(app);
+
+// CORS — allow Vercel frontend to connect
+const ALLOWED_ORIGINS = [
+    'http://localhost:5173',
+    'http://localhost:4173',
+    /\.vercel\.app$/,
+];
+
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin) {
+        const isAllowed = ALLOWED_ORIGINS.some(o =>
+            o instanceof RegExp ? o.test(origin) : o === origin
+        );
+        if (isAllowed) {
+            res.setHeader('Access-Control-Allow-Origin', origin);
+            res.setHeader('Access-Control-Allow-Methods', 'GET');
+        }
+    }
+    next();
+});
 
 // Serve client.html at the root URL
 app.get('/', (_req, res) => {
@@ -309,9 +330,7 @@ server.listen(PORT, async () => {
     console.log('');
     console.log('╔══════════════════════════════════════════════════╗');
     console.log('║   SATMIX Crypto Price Server (Binance + INR)   ║');
-    console.log(`║   HTTP + WebSocket running on port ${PORT}          ║`);
-    console.log('║                                                  ║');
-    console.log('║   → Open http://localhost:8080 in your browser   ║');
+    console.log(`║   HTTP + WebSocket running on port ${PORT}`);
     console.log('╚══════════════════════════════════════════════════╝');
     console.log('');
 
