@@ -1,155 +1,84 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
 /**
- * Symbols to track — Binance trading pairs (all USDT pairs).
+ * Coin mapping — CoinGecko IDs → our display symbols.
  */
-const SYMBOLS = [
-    { id: 'btcusdt', name: 'Bitcoin', symbol: 'BTC' },
-    { id: 'ethusdt', name: 'Ethereum', symbol: 'ETH' },
-    { id: 'solusdt', name: 'Solana', symbol: 'SOL' },
-    { id: 'bnbusdt', name: 'BNB', symbol: 'BNB' },
-    { id: 'xrpusdt', name: 'XRP', symbol: 'XRP' },
-    { id: 'dogeusdt', name: 'Dogecoin', symbol: 'DOGE' },
-    { id: 'adausdt', name: 'Cardano', symbol: 'ADA' },
+const COINS = [
+    { cgId: 'bitcoin', symbol: 'BTC', name: 'Bitcoin' },
+    { cgId: 'ethereum', symbol: 'ETH', name: 'Ethereum' },
+    { cgId: 'solana', symbol: 'SOL', name: 'Solana' },
+    { cgId: 'binancecoin', symbol: 'BNB', name: 'BNB' },
+    { cgId: 'ripple', symbol: 'XRP', name: 'XRP' },
+    { cgId: 'dogecoin', symbol: 'DOGE', name: 'Dogecoin' },
+    { cgId: 'cardano', symbol: 'ADA', name: 'Cardano' },
 ]
 
-const STREAM_NAMES = SYMBOLS.map(s => `${s.id}@ticker`)
-const BINANCE_WS_URL = `wss://stream.binance.com:9443/stream?streams=${STREAM_NAMES.join('/')}`
-const FOREX_API_URL = 'https://api.frankfurter.app/latest?from=USD&to=INR'
-const FOREX_POLL_INTERVAL = 5 * 60 * 1000 // 5 minutes
-const BROADCAST_INTERVAL = 1000 // Throttle state updates to max 1/sec
+const CG_IDS = COINS.map(c => c.cgId).join(',')
+const CG_URL = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=inr&ids=${CG_IDS}&order=market_cap_desc&sparkline=false`
+const POLL_INTERVAL = 30_000 // 30 seconds (CoinGecko free tier allows ~30 calls/min)
 
 /**
- * Custom hook that connects directly to Binance's public WebSocket
- * and provides live crypto prices with INR conversion.
- *
- * No backend server required — works standalone on Vercel/Netlify/etc.
+ * Custom hook that fetches live crypto prices from CoinGecko REST API.
+ * Provides INR prices directly — no separate forex conversion needed.
+ * Works globally including India (unlike Binance WebSocket which is blocked).
  *
  * @returns {{ prices: Map<string, object>, isConnected: boolean }}
  */
 export default function useCryptoPrices() {
     const [prices, setPrices] = useState(new Map())
     const [isConnected, setIsConnected] = useState(false)
+    const intervalRef = useRef(null)
 
-    const wsRef = useRef(null)
-    const reconnectTimer = useRef(null)
-    const inrRateRef = useRef(86.0) // Safe fallback
-    const cacheRef = useRef(new Map())
-    const pendingRef = useRef(false)
-    const throttleTimer = useRef(null)
-
-    // Fetch USD→INR rate
-    const fetchForexRate = useCallback(async () => {
+    const fetchPrices = useCallback(async () => {
         try {
-            const res = await fetch(FOREX_API_URL)
-            if (!res.ok) return
-            const data = await res.json()
-            if (data?.rates?.INR) {
-                inrRateRef.current = data.rates.INR
+            const res = await fetch(CG_URL)
+            if (!res.ok) {
+                // Likely rate-limited (429) — keep showing stale data
+                if (res.status === 429) return
+                throw new Error(`HTTP ${res.status}`)
             }
-        } catch {
-            // Keep using cached rate on failure
-        }
-    }, [])
 
-    // Flush cached prices to React state (throttled)
-    const scheduleFlush = useCallback(() => {
-        pendingRef.current = true
-        if (throttleTimer.current) return
+            const data = await res.json()
+            if (!Array.isArray(data)) return
 
-        throttleTimer.current = setTimeout(() => {
-            throttleTimer.current = null
-            if (!pendingRef.current) return
-            pendingRef.current = false
-
-            const rate = inrRateRef.current
             const newPrices = new Map()
 
-            SYMBOLS.forEach(s => {
-                const cached = cacheRef.current.get(s.id)
-                if (!cached) return
+            data.forEach(coin => {
+                const meta = COINS.find(c => c.cgId === coin.id)
+                if (!meta) return
 
-                newPrices.set(s.symbol, {
-                    ...cached,
-                    price_inr: cached.price_usd != null ? cached.price_usd * rate : null,
-                    high_24h_inr: cached.high_24h != null ? cached.high_24h * rate : null,
-                    low_24h_inr: cached.low_24h != null ? cached.low_24h * rate : null,
+                newPrices.set(meta.symbol, {
+                    id: coin.id,
+                    name: meta.name,
+                    symbol: meta.symbol,
+                    price_usd: coin.current_price / 85, // Approximate USD for display
+                    price_inr: coin.current_price,
+                    change_24h: coin.price_change_percentage_24h,
+                    high_24h: coin.high_24h / 85,
+                    low_24h: coin.low_24h / 85,
+                    high_24h_inr: coin.high_24h,
+                    low_24h_inr: coin.low_24h,
+                    volume: coin.total_volume,
                 })
             })
 
             setPrices(newPrices)
-        }, BROADCAST_INTERVAL)
+            setIsConnected(true)
+        } catch {
+            // Keep showing stale data on error — don't set isConnected to false
+            // so the UI doesn't flash a disconnected state on transient errors
+        }
     }, [])
 
     useEffect(() => {
-        // 1. Fetch INR rate immediately then poll every 5 min
-        fetchForexRate()
-        const forexInterval = setInterval(fetchForexRate, FOREX_POLL_INTERVAL)
-
-        // 2. Connect to Binance WebSocket
-        function connect() {
-            const ws = new WebSocket(BINANCE_WS_URL)
-            wsRef.current = ws
-
-            ws.onopen = () => {
-                setIsConnected(true)
-                if (reconnectTimer.current) {
-                    clearTimeout(reconnectTimer.current)
-                    reconnectTimer.current = null
-                }
-            }
-
-            ws.onmessage = (event) => {
-                try {
-                    const msg = JSON.parse(event.data)
-                    if (!msg.data || !msg.stream) return
-
-                    const ticker = msg.data
-                    const streamSymbol = msg.stream.split('@')[0]
-                    const meta = SYMBOLS.find(s => s.id === streamSymbol)
-                    if (!meta) return
-
-                    cacheRef.current.set(streamSymbol, {
-                        id: meta.id,
-                        name: meta.name,
-                        symbol: meta.symbol,
-                        price_usd: parseFloat(ticker.c),
-                        change_24h: parseFloat(ticker.P),
-                        high_24h: parseFloat(ticker.h),
-                        low_24h: parseFloat(ticker.l),
-                        volume: parseFloat(ticker.q),
-                    })
-
-                    scheduleFlush()
-                } catch {
-                    // Ignore parse errors
-                }
-            }
-
-            ws.onclose = () => {
-                setIsConnected(false)
-                if (!reconnectTimer.current) {
-                    reconnectTimer.current = setTimeout(() => {
-                        reconnectTimer.current = null
-                        connect()
-                    }, 3000)
-                }
-            }
-
-            ws.onerror = () => {
-                ws.close()
-            }
-        }
-
-        connect()
+        // Fetch immediately, then poll
+        fetchPrices()
+        intervalRef.current = setInterval(fetchPrices, POLL_INTERVAL)
 
         return () => {
-            clearInterval(forexInterval)
-            if (wsRef.current) wsRef.current.close()
-            if (reconnectTimer.current) clearTimeout(reconnectTimer.current)
-            if (throttleTimer.current) clearTimeout(throttleTimer.current)
+            if (intervalRef.current) clearInterval(intervalRef.current)
         }
-    }, [fetchForexRate, scheduleFlush])
+    }, [fetchPrices])
 
     return { prices, isConnected }
 }
